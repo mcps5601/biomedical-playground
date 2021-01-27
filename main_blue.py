@@ -73,7 +73,7 @@ def main(args):
             outputs = model(input_ids=text, 
                             token_type_ids=segments, 
                             attention_mask=attention_masks)
-
+            print(outputs.s
             loss = loss_fn(outputs, scores)
             loss.backward()
             optimizer.step()
