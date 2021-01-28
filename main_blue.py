@@ -31,8 +31,9 @@ class BertForBLUE(torch.nn.Module):
 
     def forward(self, input_ids, token_type_ids, attention_mask):
         output_layer = self.bluebert(input_ids, token_type_ids, attention_mask)
-        output_layer = output_layer.pooler_output
-        logits = self.linear(output_layer)
+        cls_token = output_layer[0][:, 0, :]
+        #output_layer = output_layer.pooler_output
+        logits = self.linear(cls_token)
 
         return logits
 
@@ -57,7 +58,7 @@ def main(args):
     model = BertForBLUE(args)
     model = model.to(device)
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     if args.criteria == 'mse':
         loss_fn = torch.nn.MSELoss()
 
@@ -73,7 +74,6 @@ def main(args):
             outputs = model(input_ids=text, 
                             token_type_ids=segments, 
                             attention_mask=attention_masks)
-            print(outputs.s
             loss = loss_fn(outputs, scores)
             loss.backward()
             optimizer.step()
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--batch_size',
-        default=16,
+        default=32,
         type=int
     )
     parser.add_argument(
@@ -130,7 +130,11 @@ if __name__ == '__main__':
         default='mse',
         type=str
     )
-
+    parser.add_argument(
+        '--learning_rate',
+        default=2e-4,
+        type=float
+    )
     # parser.add_argument(
     #     '--bert_config_file',
         
