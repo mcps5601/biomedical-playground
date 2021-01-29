@@ -31,9 +31,9 @@ class BertForBLUE(torch.nn.Module):
 
     def forward(self, input_ids, token_type_ids, attention_mask):
         output_layer = self.bluebert(input_ids, token_type_ids, attention_mask)
-        cls_token = output_layer[0][:, 0, :]
-        #output_layer = output_layer.pooler_output
-        logits = self.linear(cls_token)
+        # cls_token = output_layer[0][:, 0, :]
+        output_layer = output_layer.pooler_output
+        logits = self.linear(output_layer)
 
         return logits
 
