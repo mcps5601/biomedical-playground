@@ -29,6 +29,8 @@ class BertForBLUE(torch.nn.Module):
         self.bluebert = AutoModel.from_pretrained(self.args.model_name)
         self.dropout = torch.nn.Dropout(0.5)
         self.linear = torch.nn.Linear(self.bluebert.config.hidden_size, 1)
+        torch.nn.init.xavier_uniform_(self.linear.weight)  # as weight init of BlueBERT
+        self.linear.bias.data.fill_(0.1)  # as bias init of BlueBERT
 
     def forward(self, input_ids, token_type_ids, attention_mask):
         output_layer = self.bluebert(input_ids, token_type_ids, attention_mask)
