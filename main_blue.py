@@ -48,10 +48,6 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'), args.max_seq_len)
-    for i in train_data:
-        if len(i[0]) > 128:
-            print(i)
-    exit()
     trainloader = DataLoader(train_data, batch_size=args.batch_size, collate_fn=collate_fn)
 
     dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'), args.max_seq_len)
