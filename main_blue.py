@@ -63,6 +63,8 @@ def main(args):
         loss_fn = torch.nn.MSELoss()
 
     for epoch in range(1, args.epochs+1):
+        # start training in each epoch
+        train_loss = 0
         for train_batch in trainloader:
             optimizer.zero_grad()
 
@@ -77,8 +79,28 @@ def main(args):
             loss = loss_fn(outputs, scores)
             loss.backward()
             optimizer.step()
+            train_loss += loss.item()
+        
+        print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
+        
+        if epoch % 5 == 0:
+            # start evaluating in each epoch
+            print("=========================================")
+            dev_loss = 0
+            for dev_batch in devloader:
+                text = dev_batch[0].to(device)
+                segments = dev_batch[1].to(device)
+                attention_masks = dev_batch[2].to(device)
+                scores = dev_batch[3].to(device)
 
-        print("Epoch {}, train_loss: {}".format(epoch, loss))
+                with torch.no_grad():
+                    outputs = model(input_ids=text,
+                                    token_type_ids=segments,
+                                    attention_mask=attention_masks)
+                    loss = loss_fn(outputs, scores)
+                    dev_loss += loss.item()
+        
+            print("Epoch {}, valid_loss: {}".format(epoch, dev_loss/len(devloader)))
 
             
 
