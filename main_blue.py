@@ -47,13 +47,17 @@ def main(args):
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'))
+    train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'), args.max_seq_len)
+    for i in train_data:
+        if len(i[0]) > 128:
+            print(i)
+    exit()
     trainloader = DataLoader(train_data, batch_size=args.batch_size, collate_fn=collate_fn)
 
-    dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'))
+    dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'), args.max_seq_len)
     devloader = DataLoader(dev_data, batch_size=args.batch_size, collate_fn=collate_fn)
 
-    test_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'))
+    test_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'), args.max_seq_len)
     testloader = DataLoader(test_data, batch_size=args.batch_size, collate_fn=collate_fn)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -160,6 +164,11 @@ if __name__ == '__main__':
         '--learning_rate',
         default=2e-4,
         type=float
+    )
+    parser.add_argument(
+        '--max_seq_len',
+        default=128,
+        type=int
     )
     # parser.add_argument(
     #     '--bert_config_file',
