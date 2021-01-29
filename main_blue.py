@@ -27,12 +27,14 @@ class BertForBLUE(torch.nn.Module):
         super().__init__()
         self.args = args
         self.bluebert = AutoModel.from_pretrained(self.args.model_name)
+        self.dropout = torch.nn.Dropout(0.5)
         self.linear = torch.nn.Linear(self.bluebert.config.hidden_size, 1)
 
     def forward(self, input_ids, token_type_ids, attention_mask):
         output_layer = self.bluebert(input_ids, token_type_ids, attention_mask)
         # cls_token = output_layer[0][:, 0, :]
         output_layer = output_layer.pooler_output
+        output_layer = self.dropout(output_layer)
         logits = self.linear(output_layer)
 
         return logits
