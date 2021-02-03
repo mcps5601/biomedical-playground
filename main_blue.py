@@ -80,7 +80,7 @@ def main(args):
             outputs = model(input_ids=text, 
                             token_type_ids=segments, 
                             attention_mask=attention_masks)
-            loss = loss_fn(outputs, scores)
+            loss = loss_fn(outputs.squeeze(-1), scores)
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
