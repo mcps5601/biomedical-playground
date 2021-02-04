@@ -206,11 +206,11 @@ if __name__ == '__main__':
         default=0.01,
         type=float
     )
-
-
-
-
-
+    # parser.add_argument(
+    #     '--accumulation',
+    #     default=2,
+    #     type=int
+    # )
     # parser.add_argument(
     #     '--bert_config_file',
         
