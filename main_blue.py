@@ -48,14 +48,17 @@ def main(args):
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'), args.max_seq_len)
-    trainloader = DataLoader(train_data, batch_size=args.batch_size, collate_fn=collate_fn)
+    train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'),
+                                args.max_seq_len)
+    trainloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'), args.max_seq_len)
-    devloader = DataLoader(dev_data, batch_size=args.batch_size, collate_fn=collate_fn)
+    dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'),
+                              args.max_seq_len)
+    devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    test_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'), args.max_seq_len)
-    testloader = DataLoader(test_data, batch_size=args.batch_size, collate_fn=collate_fn)
+    test_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
+                               args.max_seq_len)
+    testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -90,6 +93,7 @@ def main(args):
         
         if epoch % 5 == 0:
             # start evaluating in each epoch
+            model.eval()
             print("=========================================")
             dev_loss = 0
             for dev_batch in devloader:
