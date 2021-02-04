@@ -2,7 +2,7 @@ import argparse
 import os, sys
 sys.path.append('bluebert')
 
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
 from blue_factory import BiossesDataset
 import torch
 from torch.utils.data import DataLoader
@@ -66,7 +66,16 @@ def main(args):
     model = BertForBLUE(args)
     model = model.to(device)
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.01, eps=1e-06)
+
+    # learning rate scheduler (linear)
+    num_training_steps = int(len(trainloader) * args.num_train_epochs)
+    num_warmup_steps = int(num_training_steps * args.warmup_proportion)
+
+    scheduler = get_linear_schedule_with_warmup(optimizer,
+                                                num_warmup_steps=num_warmup_steps,
+                                                num_training_steps=num_training_steps)
+
     if args.criteria == 'mse':
         loss_fn = torch.nn.MSELoss()
 
@@ -87,11 +96,15 @@ def main(args):
             loss = loss_fn(outputs.squeeze(-1), scores)
             loss.backward()
             optimizer.step()
+
+            # Update learning rate schedule
+            scheduler.step()
+
             train_loss += loss.item()
-        
+
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
-        
-        if epoch % 5 == 0:
+
+        if epoch  == args.epochs:
             # start evaluating in each epoch
             model.eval()
             print("=========================================")
@@ -154,7 +167,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=100,
+        default=3,
         type=int
     )
     parser.add_argument(
@@ -164,7 +177,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--learning_rate',
-        default=2e-4,
+        default=5e-5,
         type=float
     )
     parser.add_argument(
@@ -172,6 +185,18 @@ if __name__ == '__main__':
         default=128,
         type=int
     )
+    parser.add_argument(
+        '--warmup_proportion',
+        default=0.1,
+        type=float
+    )
+    parser.add_argument(
+        '--num_train_epochs',
+        default=3,
+        type=int,
+        help="Total number of training epochs to perform."
+    )
+
     # parser.add_argument(
     #     '--bert_config_file',
         
