@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
 from utils import set_seed
+from scipy.stats import pearsonr, spearmanr
 
 
 def collate_fn(batch):
@@ -103,8 +104,9 @@ def main(args):
                                     attention_mask=attention_masks)
                     loss = loss_fn(outputs.squeeze(-1), scores)
                     dev_loss += loss.item()
-        
-            print("Epoch {}, valid_loss: {}".format(epoch, dev_loss/len(devloader)))
+                    pearson = pearsonr(outputs.squeeze(-1).cpu().numpy(), scores.cpu().numpy())[0]
+
+            print("Epoch {}, valid_loss: {}, pearson:{} ".format(epoch, dev_loss/len(devloader), pearson))
 
             
 
