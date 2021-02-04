@@ -2,7 +2,7 @@ import argparse
 import os, sys
 sys.path.append('bluebert')
 
-from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoModel, AutoTokenizer, get_polynomial_decay_schedule_with_warmup
 from blue_factory import BiossesDataset
 import torch
 from torch.utils.data import DataLoader
@@ -46,7 +46,7 @@ class BertForBLUE(torch.nn.Module):
 def main(args):
     set_seed(args.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=True)
 
     train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'),
                                 args.max_seq_len)
@@ -66,15 +66,25 @@ def main(args):
     model = BertForBLUE(args)
     model = model.to(device)
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=0.01, eps=1e-06)
+
+    no_decay = ['bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        ]
+
+    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06)
 
     # learning rate scheduler (linear)
-    num_training_steps = int(len(trainloader) * args.num_train_epochs)
+    num_training_steps = int(len(trainloader) * args.epochs)
     num_warmup_steps = int(num_training_steps * args.warmup_proportion)
 
-    scheduler = get_linear_schedule_with_warmup(optimizer,
+    scheduler = get_polynomial_decay_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=num_warmup_steps,
-                                                num_training_steps=num_training_steps)
+                                                num_training_steps=num_training_steps,
+                                                lr_end=0.0,
+                                                power=1.0,
+                                                last_epoch=-1)  #cycle=False
 
     if args.criteria == 'mse':
         loss_fn = torch.nn.MSELoss()
@@ -95,6 +105,7 @@ def main(args):
                             attention_mask=attention_masks)
             loss = loss_fn(outputs.squeeze(-1), scores)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
 
             # Update learning rate schedule
@@ -191,11 +202,14 @@ if __name__ == '__main__':
         type=float
     )
     parser.add_argument(
-        '--num_train_epochs',
-        default=3,
-        type=int,
-        help="Total number of training epochs to perform."
+        '--weight_decay',
+        default=0.01,
+        type=float
     )
+
+
+
+
 
     # parser.add_argument(
     #     '--bert_config_file',
