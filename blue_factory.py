@@ -1,6 +1,6 @@
 import torch
 import pandas as pd
-from utils import _truncate_seq_pair
+from utils import _truncate_seq_pair, convert_to_unicode
 
 class BiossesDataset(torch.utils.data.Dataset):
     def __init__(self, tokenizer, data_path, max_seq_len):
@@ -13,8 +13,8 @@ class BiossesDataset(torch.utils.data.Dataset):
         sent1, sent2, score = self.df.iloc[idx, 7:10]
         score_tensor = torch.tensor(score, dtype=torch.float32)
 
-        tokens_1 = self.tokenizer.tokenize(sent1)
-        tokens_2 = self.tokenizer.tokenize(sent2)
+        tokens_1 = self.tokenizer.tokenize(convert_to_unicode(sent1))
+        tokens_2 = self.tokenizer.tokenize(convert_to_unicode(sent2))
         _truncate_seq_pair(tokens_1, tokens_2, self.max_seq_len - 3)
 
         # assemble [CLS]+sent1+[SEP]
