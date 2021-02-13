@@ -81,3 +81,10 @@ def create_supervised_trainer(model, optimizer, loss_fn, device):
         optimizer.step()
 
     return Engine(train_step)
+
+
+def create_supervised_evaluator(model, metrics=None, loss_fn, device):
+    def inference_step(engine, batch):
+        model.eval()
+
+    return Engine(inference_step)
