@@ -178,7 +178,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=10,
+        default=30,
         type=int
     )
     parser.add_argument(

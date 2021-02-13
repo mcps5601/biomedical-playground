@@ -6,7 +6,7 @@ import six
 import torch
 import os, random
 import numpy as np
-#from ignite.engines.engine import Engine
+from ignite.engines.engine import Engine
 
 # This function can be successfully used in PyTorch v.1.6.0 for reproducibility.
 def set_seed(seed):
@@ -64,19 +64,20 @@ def convert_to_unicode(text):
 
 
 
-# def create_supervised_trainer(model, optimizer, loss_fn, device):
-#     def train_step(engine, batch):
-#         model.train()
-#         optimizer.zero_grad()
-#         text = batch[0].to(device)
-#         segments = batch[1].to(device)
-#         attention_masks = batch[2].to(device)
-#         scores = batch[3].to(device)
-#         outputs = model(input_ids=text,
-#                         token_type_ids=segments,
-#                         attention_mask=attention_masks)
-#         loss = loss_fn(outputs.squeeze(-1), scores)
-#         loss.backward()
-#         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-#         optimizer.step()
+def create_supervised_trainer(model, optimizer, loss_fn, device):
+    def train_step(engine, batch):
+        model.train()
+        optimizer.zero_grad()
+        text = batch[0].to(device)
+        segments = batch[1].to(device)
+        attention_masks = batch[2].to(device)
+        scores = batch[3].to(device)
+        outputs = model(input_ids=text,
+                        token_type_ids=segments,
+                        attention_mask=attention_masks)
+        loss = loss_fn(outputs.squeeze(-1), scores)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
 
+    return Engine(train_step)
