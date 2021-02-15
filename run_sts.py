@@ -2,8 +2,12 @@ import argparse
 import os, sys
 sys.path.append('bluebert')
 
-from transformers import AutoModel, AutoTokenizer, get_polynomial_decay_schedule_with_warmup
-from blue_factory import BiossesDataset
+from transformers import (
+    AutoTokenizer,
+    get_polynomial_decay_schedule_with_warmup
+)
+from model_factory import BertForSTS
+from data_factory import BiossesDataset, MednliDataset
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
@@ -23,47 +27,33 @@ def collate_fn(batch):
     return text, segments, masks_tensors, score
 
 
-class BertForBLUE(torch.nn.Module):
-    def __init__(self, args, checkpoint=None):
-        super().__init__()
-        self.args = args
-        self.bluebert = AutoModel.from_pretrained(self.args.model_name)
-        self.dropout = torch.nn.Dropout(0.5)
-        self.linear = torch.nn.Linear(self.bluebert.config.hidden_size, 1)
-        torch.nn.init.xavier_uniform_(self.linear.weight)  # as weight init of BlueBERT
-        self.linear.bias.data.fill_(0.1)  # as bias init of BlueBERT
-
-    def forward(self, input_ids, token_type_ids, attention_mask):
-        output_layer = self.bluebert(input_ids, token_type_ids, attention_mask)
-        # cls_token = output_layer[0][:, 0, :]
-        output_layer = output_layer.pooler_output
-        output_layer = self.dropout(output_layer)
-        logits = self.linear(output_layer)
-
-        return logits
-
-
 def main(args):
     set_seed(args.seed)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=True)
+    processors = {
+        "sts": BiossesDataset,
+        "nli": MednliDataset,
+    }
+    processor = processors[args.task_name]
 
-    train_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'),
+    train_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'),
                                 args.max_seq_len)
     trainloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    dev_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'),
+    dev_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'),
                               args.max_seq_len)
-    devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
 
-    test_data = BiossesDataset(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
-                               args.max_seq_len)
-    testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    # test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
+    #                            args.max_seq_len)
+    # testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    if args.task_name == 'sts':
+        model = BertForSTS(args)
 
-    model = BertForBLUE(args)
     model = model.to(device)
     model.train()
 
@@ -74,6 +64,7 @@ def main(args):
         ]
 
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06)
+    #optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06, weight_decay=args.weight_decay)
 
     # learning rate scheduler (linear)
     num_training_steps = int(len(trainloader) * args.epochs)
@@ -86,8 +77,7 @@ def main(args):
                                                 power=1.0,
                                                 last_epoch=-1)  #cycle=False
 
-    if args.criteria == 'mse':
-        loss_fn = torch.nn.MSELoss()
+    loss_fn = torch.nn.MSELoss()
 
     for epoch in range(1, args.epochs+1):
         # start training in each epoch

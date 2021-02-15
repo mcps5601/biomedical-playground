@@ -6,7 +6,7 @@ import six
 import torch
 import os, random
 import numpy as np
-from ignite.engines.engine import Engine
+from ignite.engine import Engine
 
 # This function can be successfully used in PyTorch v.1.6.0 for reproducibility.
 def set_seed(seed):
@@ -83,8 +83,8 @@ def create_supervised_trainer(model, optimizer, loss_fn, device):
     return Engine(train_step)
 
 
-def create_supervised_evaluator(model, metrics=None, loss_fn, device):
-    def inference_step(engine, batch):
-        model.eval()
+# def create_supervised_evaluator(model, metrics=None, loss_fn, device):
+#     def inference_step(engine, batch):
+#         model.eval()
 
-    return Engine(inference_step)
+#     return Engine(inference_step)
