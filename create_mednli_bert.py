@@ -1,7 +1,7 @@
 import csv
 import json
 
-import fire
+# import fire
 import tqdm
 from pathlib import Path
 
