@@ -67,6 +67,7 @@ class MednliDataset(torch.utils.data.Dataset):
         # labels
         label_id = self.label_map[label]
         label_tensor = torch.tensor(label_id)
+        # label_tensor = torch.IntTensor(label_id)
 
         return (tokens_tensor, segments_tensor, label_tensor)
 

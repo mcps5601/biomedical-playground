@@ -23,6 +23,8 @@ def collate_fn(batch):
     segments = [i[1] for i in batch]
     segments = pad_sequence(segments, batch_first=True)
     label = torch.stack([i[2] for i in batch])
+    # print(label.type())
+    # exit()
     masks_tensors = torch.zeros(text.shape, dtype=torch.long)
     masks_tensors = masks_tensors.masked_fill(text != 0, 1)
 
@@ -50,6 +52,17 @@ def main(args):
     test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
                                args.max_seq_len)
     testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    data = next(iter(testloader))
+
+    tokens_tensors, segments_tensors, \
+        masks_tensors, label_ids = data
+
+    print(f"""
+    label_ids.shape        = {label_ids.shape}
+    {label_ids}
+    """)
+    exit()
+
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
