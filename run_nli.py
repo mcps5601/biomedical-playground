@@ -47,9 +47,9 @@ def main(args):
                               args.max_seq_len)
     devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
-    # test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
-    #                            args.max_seq_len)
-    # testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
+                               args.max_seq_len)
+    testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -112,8 +112,8 @@ def main(args):
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
-        if epoch  == args.epochs:
-            # start evaluating in each epoch
+        if epoch % 5 == 0:
+            # start evaluating
             model.eval()
             print("=========================================")
             dev_loss = 0
@@ -138,6 +138,32 @@ def main(args):
                                                         epoch,
                                                         dev_loss/len(devloader),
                                                         val_acc))
+        elif epoch  == args.epochs:
+            # start testing
+            print("=========================================")
+            model.eval()
+            test_loss = 0
+            for test_batch in testloader:
+                text = test_batch[0].to(device)
+                segments = test_batch[1].to(device)
+                attention_masks = test_batch[2].to(device)
+                labels = test_batch[3].to(device)
+
+                with torch.no_grad():
+                    outputs = model(input_ids=text,
+                                    token_type_ids=segments,
+                                    attention_mask=attention_masks,
+                                    labels=labels)
+                    loss = outputs.loss
+                    dev_loss += loss.item()
+                    logits = outputs.logits
+                    _, y_hat = torch.max(logits, dim=1)
+                    test_acc = accuracy_score(y_hat.cpu(), labels.cpu())
+
+            print("Epoch {}, test_loss: {}, test_acc:{} ".format(
+                                                        epoch,
+                                                        test_loss/len(testloader),
+                                                        test_acc))
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -175,7 +201,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=5,
+        default=10,
         type=int
     )
     parser.add_argument(
