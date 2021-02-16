@@ -52,17 +52,6 @@ def main(args):
     test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
                                args.max_seq_len)
     testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
-    data = next(iter(testloader))
-
-    tokens_tensors, segments_tensors, \
-        masks_tensors, label_ids = data
-
-    print(f"""
-    label_ids.shape        = {label_ids.shape}
-    {label_ids}
-    """)
-    exit()
-
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -125,7 +114,7 @@ def main(args):
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
-        if epoch % 5 == 0:
+        if epoch % 2 == 0:
             # start evaluating
             model.eval()
             print("=========================================")
@@ -151,7 +140,7 @@ def main(args):
                                                         epoch,
                                                         dev_loss/len(devloader),
                                                         val_acc))
-        elif epoch  == args.epochs:
+        if epoch  == args.epochs:
             # start testing
             print("=========================================")
             model.eval()
@@ -168,7 +157,7 @@ def main(args):
                                     attention_mask=attention_masks,
                                     labels=labels)
                     loss = outputs.loss
-                    dev_loss += loss.item()
+                    test_loss += loss.item()
                     logits = outputs.logits
                     _, y_hat = torch.max(logits, dim=1)
                     test_acc = accuracy_score(y_hat.cpu(), labels.cpu())
@@ -214,7 +203,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=10,
+        default=2,
         type=int
     )
     parser.add_argument(
