@@ -45,9 +45,9 @@ def main(args):
                               args.max_seq_len)
     devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
 
-    # test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
-    #                            args.max_seq_len)
-    # testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
+    test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
+                               args.max_seq_len)
+    testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -64,7 +64,7 @@ def main(args):
         ]
 
     optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06)
-    #optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06, weight_decay=args.weight_decay)
+    # optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06, weight_decay=args.weight_decay)
 
     # learning rate scheduler (linear)
     num_training_steps = int(len(trainloader) * args.epochs)
@@ -90,12 +90,12 @@ def main(args):
             attention_masks = train_batch[2].to(device)
             scores = train_batch[3].to(device)
 
-            outputs = model(input_ids=text, 
-                            token_type_ids=segments, 
-                            attention_mask=attention_masks)
+            outputs = model(input_ids=text,
+                            attention_mask=attention_masks,
+                            token_type_ids=segments)
             loss = loss_fn(outputs.squeeze(-1), scores)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
             optimizer.step()
 
             # Update learning rate schedule
@@ -105,11 +105,12 @@ def main(args):
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
-        if epoch  == args.epochs:
-            # start evaluating in each epoch
+        if epoch  % 5 == 0:
+            # start evaluating
             model.eval()
             print("=========================================")
             dev_loss = 0
+            #predictions = torch.empty_like(devloader)
             for dev_batch in devloader:
                 text = dev_batch[0].to(device)
                 segments = dev_batch[1].to(device)
@@ -118,13 +119,35 @@ def main(args):
 
                 with torch.no_grad():
                     outputs = model(input_ids=text,
-                                    token_type_ids=segments,
-                                    attention_mask=attention_masks)
+                                    attention_mask=attention_masks,
+                                    token_type_ids=segments)
                     loss = loss_fn(outputs.squeeze(-1), scores)
                     dev_loss += loss.item()
                     pearson = pearsonr(outputs.squeeze(-1).cpu().numpy(), scores.cpu().numpy())[0]
 
             print("Epoch {}, valid_loss: {}, pearson:{} ".format(epoch, dev_loss/len(devloader), pearson))
+
+        if epoch  == args.epochs:
+            # start testing
+            model.eval()
+            print("=========================================")
+            test_loss = 0
+            #predictions = torch.empty_like(devloader)
+            for test_batch in testloader:
+                text = test_batch[0].to(device)
+                segments = test_batch[1].to(device)
+                attention_masks = test_batch[2].to(device)
+                scores = test_batch[3].to(device)
+
+                with torch.no_grad():
+                    outputs = model(input_ids=text,
+                                    attention_mask=attention_masks,
+                                    token_type_ids=segments)
+                    loss = loss_fn(outputs.squeeze(-1), scores)
+                    test_loss += loss.item()
+                    pearson_v = pearsonr(outputs.squeeze(-1).cpu().numpy(), scores.cpu().numpy())[0]
+
+            print("Epoch {}, test_loss: {}, pearson:{} ".format(epoch, test_loss/len(testloader), pearson_v))
 
             
 
@@ -168,7 +191,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=30,
+        default=20,
         type=int
     )
     parser.add_argument(
