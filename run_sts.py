@@ -171,12 +171,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--data_name',
         default='BIOSSES',
-        choices=['BIOSSES', 'MEDSTS'],
+        choices=['BIOSSES', 'MEDSTS', 'STS-B'],
         type=str
     )
     parser.add_argument(
         '--data_dir',
         default='/home/dean/datasets/benchmarks/BLUE/data_v0.2/data/',
+        choices=[
+            '/home/dean/datasets/benchmarks/BLUE/data_v0.2/data/',
+            '/home/dean/datasets/benchmarks/GLUE/STS-B', # Use STS-B dataset for checking model performance.
+            ]
         type=str
     )
     parser.add_argument(
