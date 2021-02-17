@@ -1,3 +1,8 @@
+"""
+This file is copied from Yifan Peng's repo: BLUE_Benchmark.
+https://github.com/ncbi-nlp/BLUE_Benchmark/blob/master/blue/bert/create_mednli_bert.py
+"""
+
 import csv
 import json
 
