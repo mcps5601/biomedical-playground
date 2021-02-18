@@ -3,6 +3,7 @@ import os, sys
 sys.path.append('bluebert')
 
 from transformers import (
+    AutoModelForSequenceClassification,
     AutoTokenizer,
     get_polynomial_decay_schedule_with_warmup
 )
@@ -53,6 +54,14 @@ def main(args):
 
     if args.task_name == 'sts':
         model = BertForSTS(args)
+        loss_fn = torch.nn.MSELoss()
+    # elif args.task_name == 'nli':
+    #     model = AutoModelForSequenceClassification.from_pretrained(args.model_name, num_labels=3)
+    #     for name, param in model.named_parameters():
+    #         if 'classifier.weight' in name:
+    #             torch.nn.init.xavier_uniform_(param.data)
+    #         elif 'classifier.bias' in name:
+    #             param.data.fill_(0)
 
     model = model.to(device)
     model.train()
@@ -77,8 +86,6 @@ def main(args):
                                                 power=1.0,
                                                 last_epoch=-1)  #cycle=False
 
-    loss_fn = torch.nn.MSELoss()
-
     for epoch in range(1, args.epochs+1):
         # start training in each epoch
         train_loss = 0
@@ -95,7 +102,7 @@ def main(args):
                             token_type_ids=segments)
             loss = loss_fn(outputs.squeeze(-1), scores)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clipping)
             optimizer.step()
 
             # Update learning rate schedule
@@ -171,7 +178,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--data_name',
         default='BIOSSES',
-        choices=['BIOSSES', 'MEDSTS', 'STS-B'],
+        choices=['BIOSSES', 'clinicalSTS', 'mednli', 'STS-B'],
         type=str
     )
     parser.add_argument(
@@ -180,7 +187,7 @@ if __name__ == '__main__':
         choices=[
             '/home/dean/datasets/benchmarks/BLUE/data_v0.2/data/',
             '/home/dean/datasets/benchmarks/GLUE/STS-B', # Use STS-B dataset for checking model performance.
-            ]
+            ],
         type=str
     )
     parser.add_argument(
@@ -195,7 +202,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--epochs',
-        default=20,
+        default=30,
         type=int
     )
     parser.add_argument(
@@ -221,6 +228,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--weight_decay',
         default=0.01,
+        type=float
+    )
+    parser.add_argument(
+        '--grad_clipping',
+        default=1.5,
         type=float
     )
     # parser.add_argument(
