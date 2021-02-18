@@ -5,7 +5,8 @@ sys.path.append('bluebert')
 from transformers import (
     AutoModelForSequenceClassification,
     AutoTokenizer,
-    get_polynomial_decay_schedule_with_warmup
+    get_polynomial_decay_schedule_with_warmup,
+    get_linear_schedule_with_warmup
 )
 from model_factory import BertForSTS
 from data_factory import BiossesDataset, MednliDataset
@@ -72,8 +73,8 @@ def main(args):
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
 
-    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06)
-    # optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06, weight_decay=args.weight_decay)
+    # optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06)
+    optimizer = torch.optim.Adam(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-06, weight_decay=args.weight_decay)
 
     # learning rate scheduler (linear)
     num_training_steps = int(len(trainloader) * args.epochs)
@@ -85,10 +86,15 @@ def main(args):
                                                 lr_end=0.0,
                                                 power=1.0,
                                                 last_epoch=-1)  #cycle=False
+    # scheduler = get_linear_schedule_with_warmup(optimizer,
+    #                                             num_warmup_steps=num_warmup_steps,
+    #                                             num_training_steps=num_training_steps,
+    #                                             last_epoch=-1)  #cycle=False
 
     for epoch in range(1, args.epochs+1):
         # start training in each epoch
         train_loss = 0
+        dev_history = 0
         for train_batch in trainloader:
             optimizer.zero_grad()
 
@@ -130,12 +136,17 @@ def main(args):
                                     token_type_ids=segments)
                     loss = loss_fn(outputs.squeeze(-1), scores)
                     dev_loss += loss.item()
+                    if dev_loss > dev_history and epoch > args.epochs // 2:
+                        print("Find a better model! Let's save it.")
+                        dev_history = dev_loss
+                        torch.save(model.state_dict(), args.save_dir+'/model.pkl')
                     pearson = pearsonr(outputs.squeeze(-1).cpu().numpy(), scores.cpu().numpy())[0]
 
             print("Epoch {}, valid_loss: {}, pearson:{} ".format(epoch, dev_loss/len(devloader), pearson))
 
         if epoch  == args.epochs:
             # start testing
+            model.load_state_dict(torch.load(args.save_dir+'/model.pkl'))
             model.eval()
             print("=========================================")
             test_loss = 0
@@ -154,7 +165,7 @@ def main(args):
                     test_loss += loss.item()
                     pearson_v = pearsonr(outputs.squeeze(-1).cpu().numpy(), scores.cpu().numpy())[0]
 
-            print("Epoch {}, test_loss: {}, pearson:{} ".format(epoch, test_loss/len(testloader), pearson_v))
+            print("Finished! test_loss: {}, pearson:{} ".format(test_loss/len(testloader), pearson_v))
 
             
 
@@ -167,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--model_name',
         default='bionlp/bluebert_pubmed_mimic_uncased_L-12_H-768_A-12',
+        #default='bert-base-uncased',
         type=str
     )
     parser.add_argument(
@@ -188,6 +200,11 @@ if __name__ == '__main__':
             '/home/dean/datasets/benchmarks/BLUE/data_v0.2/data/',
             '/home/dean/datasets/benchmarks/GLUE/STS-B', # Use STS-B dataset for checking model performance.
             ],
+        type=str
+    )
+    parser.add_argument(
+        '--save_dir',
+        default='./saved_model',
         type=str
     )
     parser.add_argument(
@@ -232,7 +249,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--grad_clipping',
-        default=1.5,
+        default=1.8,
         type=float
     )
     # parser.add_argument(
