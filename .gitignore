@@ -133,3 +133,4 @@ test.py
 .vscode
 output
 saved_model
+logs
