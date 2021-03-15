@@ -114,7 +114,9 @@ def main(args):
             scheduler.step()
 
             train_loss += loss.item()
-            writer.add_scalar('train_loss', train_loss, epoch)
+            writer.add_scalar(os.path.join('train_loss', args.exp_name),
+                              train_loss,
+                              epoch)
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
@@ -175,6 +177,11 @@ def main(args):
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--exp_name',
+        default='lr_5e-5',
+        type=str
+    )
     parser.add_argument(
         '--model_name',
         default='bionlp/bluebert_pubmed_mimic_uncased_L-12_H-768_A-12',
