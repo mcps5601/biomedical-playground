@@ -56,13 +56,8 @@ def main(args):
     if args.task_name == 'sts':
         model = BertForSTS(args)
         loss_fn = torch.nn.MSELoss()
-    # elif args.task_name == 'nli':
-    #     model = AutoModelForSequenceClassification.from_pretrained(args.model_name, num_labels=3)
-    #     for name, param in model.named_parameters():
-    #         if 'classifier.weight' in name:
-    #             torch.nn.init.xavier_uniform_(param.data)
-    #         elif 'classifier.bias' in name:
-    #             param.data.fill_(0)
+    else:
+        raise AssertionError('The assigned task name must be STS.')
 
     model = model.to(device)
     model.train()
