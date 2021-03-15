@@ -13,6 +13,7 @@ from data_factory import BiossesDataset, MednliDataset
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.tensorboard import SummaryWriter
 from utils import set_seed
 from scipy.stats import pearsonr, spearmanr
 
@@ -86,6 +87,9 @@ def main(args):
     #                                             num_training_steps=num_training_steps,
     #                                             last_epoch=-1)  #cycle=False
 
+    # Initialize tensorboard writer
+    writer = SummaryWriter(log_dir=args.log_dir)
+
     for epoch in range(1, args.epochs+1):
         # start training in each epoch
         train_loss = 0
@@ -110,6 +114,7 @@ def main(args):
             scheduler.step()
 
             train_loss += loss.item()
+            writer.add_scalar('train_loss', train_loss, epoch)
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
@@ -200,6 +205,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--save_dir',
         default='./saved_model',
+        type=str
+    )
+    parser.add_argument(
+        '--log_dir',
+        default='./logs/sts',
         type=str
     )
     parser.add_argument(
