@@ -88,8 +88,7 @@ def main(args):
     #                                             last_epoch=-1)  #cycle=False
 
     # Initialize tensorboard writer
-    # writer = SummaryWriter(log_dir=os.path.join(args.log_dir, args.exp_name))
-    writer = SummaryWriter(log_dir=args.log_dir)
+    writer = SummaryWriter(log_dir=os.path.join(args.log_dir, args.exp_name))
 
     for epoch in range(1, args.epochs+1):
         # start training in each epoch
@@ -115,7 +114,7 @@ def main(args):
             scheduler.step()
 
             train_loss += loss.item()
-            writer.add_scalar('train_loss/lr1e-5',
+            writer.add_scalar(f'train_loss',
                               train_loss,
                               epoch)
 
