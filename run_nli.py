@@ -12,6 +12,7 @@ from data_factory import BiossesDataset, MednliDataset
 import torch
 from torch.utils.data import DataLoader
 from torch.nn.utils.rnn import pad_sequence
+from torch.utils.tensorboard import SummaryWriter
 from utils import set_seed
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import accuracy_score
@@ -86,7 +87,8 @@ def main(args):
                                                 lr_end=0.0,
                                                 power=1.0,
                                                 last_epoch=-1)  #cycle=False
-
+    # Initialize tensorboard writer
+    writer = SummaryWriter(log_dir=os.path.join(args.log_dir, args.task_name))
     for epoch in range(1, args.epochs+1):
         # start training in each epoch
         train_loss = 0
@@ -111,6 +113,9 @@ def main(args):
             scheduler.step()
 
             train_loss += loss.item()
+            writer.add_scalar('train_loss/{}'.format(args.exp_name),
+                              train_loss,
+                              epoch)
 
         print("Epoch {}, train_loss: {}".format(epoch, train_loss/len(trainloader)))
 
@@ -170,6 +175,11 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--exp_name',
+        default='lr_1e-5',
+        type=str
+    )
+    parser.add_argument(
         '--model_name',
         default='bionlp/bluebert_pubmed_mimic_uncased_L-12_H-768_A-12',
         type=str
@@ -189,6 +199,11 @@ if __name__ == '__main__':
     parser.add_argument(
         '--data_dir',
         default='/home/dean/datasets/benchmarks/BLUE/data_v0.2/data/',
+        type=str
+    )
+    parser.add_argument(
+        '--log_dir',
+        default='./logs',
         type=str
     )
     parser.add_argument(
@@ -213,7 +228,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--learning_rate',
-        default=5e-5,
+        default=1e-5,
         type=float
     )
     parser.add_argument(
