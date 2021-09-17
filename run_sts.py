@@ -33,24 +33,49 @@ def collate_fn(batch):
 def main(args):
     set_seed(args.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, do_lower_case=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name,
+        do_lower_case=True
+    )
     processors = {
         "sts": BiossesDataset,
         "nli": MednliDataset,
     }
     processor = processors[args.task_name]
 
-    train_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'train.tsv'),
-                                args.max_seq_len)
-    trainloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
-
-    dev_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'dev.tsv'),
-                              args.max_seq_len)
-    devloader = DataLoader(dev_data, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
-
-    test_data = processor(tokenizer, os.path.join(args.data_dir, args.data_name, 'test.tsv'),
-                               args.max_seq_len)
-    testloader = DataLoader(test_data, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
+    train_data = processor(
+        tokenizer,
+        os.path.join(args.data_dir, args.data_name, 'train.tsv'),
+        args.max_seq_len
+    )
+    trainloader = DataLoader(
+        train_data,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_fn
+    )
+    dev_data = processor(
+        tokenizer,
+        os.path.join(args.data_dir, args.data_name, 'dev.tsv'),
+        args.max_seq_len
+    )
+    devloader = DataLoader(
+        dev_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_fn
+    )
+    test_data = processor(
+        tokenizer,
+        os.path.join(args.data_dir, args.data_name, 'test.tsv'),
+        args.max_seq_len
+    )
+    testloader = DataLoader(
+        test_data,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_fn
+    )
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -76,12 +101,15 @@ def main(args):
     num_training_steps = int(len(trainloader) * args.epochs)
     num_warmup_steps = int(num_training_steps * args.warmup_proportion)
 
-    scheduler = get_polynomial_decay_schedule_with_warmup(optimizer,
-                                                num_warmup_steps=num_warmup_steps,
-                                                num_training_steps=num_training_steps,
-                                                lr_end=0.0,
-                                                power=1.0,
-                                                last_epoch=-1)  #cycle=False
+    scheduler = get_polynomial_decay_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=num_warmup_steps,
+        num_training_steps=num_training_steps,
+        lr_end=0.0,
+        power=1.0,
+        last_epoch=-1
+    )  #cycle=False
+
     # scheduler = get_linear_schedule_with_warmup(optimizer,
     #                                             num_warmup_steps=num_warmup_steps,
     #                                             num_training_steps=num_training_steps,
